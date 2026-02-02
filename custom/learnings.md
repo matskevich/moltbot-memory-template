@@ -62,6 +62,53 @@ rsync --ignore-existing skills/ server:~/clawd/skills/
 
 ---
 
+## Правило 4: Compaction = Амнезия
+
+**Проблема:** После compaction агент теряет весь контекст. Предыдущие сообщения, решения, незавершённые задачи — всё забыто.
+
+**Почему так:**
+- Context > limit → memoryFlush → .bak → новая сессия
+- .bak файлы НЕ индексируются в memory_search
+- Нет автоматического восстановления
+
+**Как понять что было compaction:**
+- "вижу только одно твоё сообщение" — признак новой сессии
+- Проверить: `ls -la ~/.clawdbot/agents/main/sessions/*.bak`
+
+**Решение — Continuous Encoding:**
+```markdown
+# Во время работы ЗАПИСЫВАЙ:
+1. custom/action-log.md — что сделал
+2. custom/learnings.md — что понял
+3. custom/self-notes.md — что не закончил
+
+# Эти файлы переживают compaction!
+```
+
+**memoryFlush должен записывать:**
+- Session summary в `memory/sessions/YYYY-MM-DD-summary.md`
+- Незавершённые задачи в `custom/self-notes.md`
+- Новые факты в `custom/learnings.md`
+
+---
+
+## Правило 5: Пиши ДО действия, не после
+
+**Проблема:** Если запишешь результат ПОСЛЕ compaction — он потеряется.
+
+**Пример:**
+```
+❌ Сделал рефакторинг → compaction → забыл записать
+✅ Записал план → сделал рефакторинг → записал результат
+```
+
+**Решение:**
+1. Action-log ПЕРЕД началом работы
+2. Self-notes с контекстом
+3. Learnings сразу когда понял
+
+---
+
 ## Meta-правило
 
 Все эти ошибки объединяет одно:
@@ -76,5 +123,5 @@ rsync --ignore-existing skills/ server:~/clawd/skills/
 
 ---
 
-**Версия:** 1.0
-**Обновлено:** 2026-02-01
+**Версия:** 1.1
+**Обновлено:** 2026-02-02
