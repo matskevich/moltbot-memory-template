@@ -1,7 +1,7 @@
 # Night Review — Daily Meta-Analysis + Awakening
 
 **Status:** ✅ Active (cron: daily 19:00 UTC / 3:00 Bali)  
-**Job ID:** c47d27b7-cb3f-4886-8ff0-67b9b5af2d17
+**Job ID:** YOUR_CRON_JOB_ID
 
 ## Purpose
 
@@ -74,10 +74,10 @@ night-review (orchestrator)
 moltbot cron list
 
 # Run now (test)
-moltbot cron run --id c47d27b7-cb3f-4886-8ff0-67b9b5af2d17
+moltbot cron run --id YOUR_CRON_JOB_ID
 
 # View runs history
-moltbot cron runs --id c47d27b7-cb3f-4886-8ff0-67b9b5af2d17
+moltbot cron runs --id YOUR_CRON_JOB_ID
 ```
 
 ## Dependencies

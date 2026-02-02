@@ -19,7 +19,7 @@ Send final report to Telegram.
 
 Use cron tool:
 ```
-cron run --id c47d27b7-cb3f-4886-8ff0-67b9b5af2d17
+cron run --id YOUR_CRON_JOB_ID
 ```
 
 ## Option 3: Check cron status
