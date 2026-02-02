@@ -1,0 +1,56 @@
+# Night Review Sources Configuration
+
+## Priority Order
+
+sources:
+  - name: moltbook
+    type: github
+    priority: 1
+    targets:
+      - org: moltbot
+        repos: [moltbot, moltbook]
+        include: [discussions, issues, wiki]
+    queries:
+      - "in:title,body {theme}"
+      - "in:comments {theme}"
+      - "label:agent-experience {theme}"
+      - "label:best-practice {theme}"
+  
+  - name: moltbot-docs
+    type: local
+    priority: 2
+    paths:
+      - ~/moltbot-src/docs
+    method: grep + memory_search
+  
+  - name: agent-experiences
+    type: web
+    priority: 3
+    queries:
+      - "moltbot agent {theme}"
+      - "{theme} autonomous agent patterns"
+      - "{theme} agent anti-patterns"
+  
+  - name: technical-context
+    type: web
+    priority: 4
+    queries:
+      - "{theme} best practices"
+      - "{theme} common mistakes"
+
+## Search Strategy
+
+dual_search:
+  primary: web_search (Brave) + web_fetch for moltbook
+  secondary: exa (if available)
+  fallback: web_search only
+
+moltbook_specific:
+  github_search: "https://github.com/search?q=org:moltbot+{query}"
+  discussions: "https://github.com/orgs/moltbot/discussions"
+  
+## Quality Thresholds
+
+min_sources_per_theme: 5
+prefer_moltbook: true  # prioritize moltbook results
+cross_reference: true  # validate findings across sources

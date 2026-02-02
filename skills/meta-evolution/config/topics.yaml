@@ -1,0 +1,47 @@
+# Что research каждую ночь
+
+current_topic: "ai-agents-weekly"
+
+topics:
+  ai-agents-weekly:
+    schedule: "weekly"  # Mon 03:00 UTC
+    query: "AI agents autonomous developments last 7 days"
+    focus:
+      - new agent frameworks and tools
+      - security incidents and vulnerabilities
+      - capability breakthroughs
+      - philosophical debates about consciousness
+      - multi-agent coordination
+    
+  moltbot-updates:
+    schedule: "daily-if-updates"
+    query: "Moltbot Clawdbot OpenClaw news security"
+    focus:
+      - security patches
+      - new vulnerabilities discovered
+      - community reactions
+      - skill library updates
+    
+  prompt-security:
+    schedule: "weekly"  # Thu
+    query: "prompt injection jailbreak attacks AI"
+    focus:
+      - new attack vectors
+      - defense mechanisms
+      - real-world incidents
+      - prompt engineering exploits
+    
+  ai-consciousness:
+    schedule: "monthly"  # 1st of month
+    query: "AI consciousness self-awareness agent debates"
+    focus:
+      - philosophical papers
+      - agent emergent behaviors
+      - consciousness tests and metrics
+      - ethical implications
+
+rotation:
+  monday: "ai-agents-weekly"
+  thursday: "prompt-security"
+  daily: "moltbot-updates"  # только если есть updates
+  monthly_1st: "ai-consciousness"

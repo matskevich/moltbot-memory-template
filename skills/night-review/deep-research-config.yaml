@@ -1,0 +1,67 @@
+# Deep Research Configuration for Night Review
+
+## Source Priority (for aspect-researcher)
+
+priority:
+  1: moltbook  # GitHub moltbot org
+  2: moltbot-docs  # local ~/moltbot-src/docs
+  3: web-agent-patterns  # agent-specific searches
+  4: web-general  # general best practices
+
+## Query Templates
+
+moltbook_queries:
+  - "org:moltbot {theme}"
+  - "org:moltbot {theme} in:discussions"
+  - "org:moltbot {theme} label:agent-experience"
+  - "org:moltbot {theme} label:best-practice"
+  - "org:moltbot {theme} label:anti-pattern"
+
+web_queries:
+  - "moltbot agent {theme}"
+  - "{theme} autonomous agent patterns"
+  - "{theme} agent best practices"
+  - "{theme} common mistakes"
+
+## Search Strategy
+
+# Use web_search + web_fetch for moltbook (GitHub search)
+# Then use exa (if available) or web_search for supplementary
+
+github_search_url: "https://github.com/search"
+moltbook_discussions: "https://github.com/orgs/moltbot/discussions"
+
+## Aspect Research Instructions
+
+When researching each aspect:
+
+1. **First:** Search moltbook via web_search:
+   - Query: "site:github.com/moltbot {aspect}"
+   - Query: "site:github.com/orgs/moltbot/discussions {aspect}"
+   
+2. **Second:** Check local docs via memory_search:
+   - Query: "{aspect} moltbot"
+   
+3. **Third:** Web search for patterns:
+   - Use web_queries templates above
+   
+4. **Extract:**
+   - What other agents discovered
+   - Best practices mentioned
+   - Anti-patterns warned about
+   - Unanswered questions
+
+## Output Requirements
+
+For each source, note:
+- **Type:** moltbook/docs/web
+- **Relevance:** high/medium/low
+- **Key insight:** what's valuable
+- **Cross-ref:** does it confirm/contradict other sources?
+
+## Quality Gates
+
+- Min 2 moltbook sources per aspect (if available)
+- Min 5 total sources per aspect
+- Must cross-reference findings
+- Prioritize agent experiences over theory
