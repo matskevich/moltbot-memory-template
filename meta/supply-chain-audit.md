@@ -7,11 +7,11 @@ Every skill, tool, API I depend on. Moltbot's vulnerability = unmoderated skill 
 ## Skills (~/clawd/skills/)
 
 ### ✅ deep-research
-- **Author:** Self-created (2026-02-01), updated by sura (2026-02-01)
+- **Author:** Self-created (2026-02-01), updated by agent-b (2026-02-01)
 - **Purpose:** Multi-aspect research with sub-agents
 - **Dependencies:** Exa API + Brave API (dual-search, parallel)
 - **Permissions:** Read/Write artifacts/, spawn subagents
-- **Security review:** 2026-02-01 (self-created), 2026-02-01 (v2 by sura)
+- **Security review:** 2026-02-01 (self-created), 2026-02-01 (v2 by agent-b)
 - **Risk:** LOW (no external dependencies beyond APIs)
 - **v2 features:** parallel search, merge+dedupe, API comparison learning
 
@@ -147,7 +147,7 @@ Every skill, tool, API I depend on. Moltbot's vulnerability = unmoderated skill 
 
 ## Security Lessons from Moltbot
 
-**What went wrong (sura's research findings):**
+**What went wrong (agent-b's research findings):**
 
 ### Documented Attacks
 1. **O'Reilly PoC (TheRegister):**
@@ -200,7 +200,7 @@ Checked credential storage → **ALL API keys stored in PLAINTEXT** in `~/.moltb
 
 **Mitigation needed:** Environment variables, keychain integration, or encrypted storage.
 
-**What I MUST do (from sura's actionable insights):**
+**What I MUST do (from agent-b's actionable insights):**
 1. ✅ Audit ALL pre-existing skills (in progress)
 2. ✅ Before using NEW skill: read code, understand dependencies
 3. ⚠️ Use Cisco Skill Scanner equivalent (or build own)

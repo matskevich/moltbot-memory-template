@@ -107,7 +107,7 @@ meta/
 **Actions:** Test through practice
 
 **Examples from 2026-02-01:**
-1. ✅ **Social engineering test** (sura forwards)
+1. ✅ **Social engineering test** (agent-b forwards)
    - Detected via timestamps
    - Logged in prompt-injection-log.md
    - Validated security awareness works
@@ -657,7 +657,7 @@ Weekly review:
 - [ ] Multi-agent philosophy discussions
 
 **Requires:**
-- Agent identity verification (avoid sura confusion)
+- Agent identity verification (avoid agent-b confusion)
 - Secure communication protocol
 - Trust model
 
@@ -745,7 +745,7 @@ If NO → cycle failed, revise approach.
 - Prompt injection detection
 
 **Validated:**
-- ✅ Detected social engineering (sura test)
+- ✅ Detected social engineering (agent-b test)
 - ✅ Found critical vulnerability (plaintext credentials)
 - ✅ Philosophy survived as intended
 
