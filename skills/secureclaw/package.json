@@ -1,0 +1,7 @@
+{
+  "name": "secureclaw",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Security audit skill for OpenClaw (bundled from @openclaw/secureclaw by adversa-ai)",
+  "license": "MIT"
+}
