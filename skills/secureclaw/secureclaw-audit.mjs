@@ -1,5 +1,3 @@
-#!/usr/bin/env node
-
 // cli.ts
 import * as os2 from "node:os";
 import * as path3 from "node:path";
@@ -509,18 +507,63 @@ async function auditExecution(ctx) {
     autoFixable: !1,
     references: ["CVE-2026-25253"],
     owaspAsi: "ASI02"
-  }), ctx.config.tools?.exec?.host === "gateway" && findings.push({
+  });
+  let execApprovalsPath = path.join(ctx.stateDir, "exec-approvals.json"), execApprovalsContent = await ctx.readFile(execApprovalsPath), hasExecAllowlist = !1, execAllowlistCount = 0, execAskFallback = "unknown", execDangerousInAllowlist = [];
+  if (execApprovalsContent)
+    try {
+      let ea = JSON.parse(execApprovalsContent), defaultSecurity = ea?.defaults?.security;
+      execAskFallback = ea?.defaults?.askFallback ?? "unknown";
+      let agents = ea?.agents ?? {};
+      for (let [, agentConf] of Object.entries(agents)) {
+        let allowlist = agentConf?.allowlist ?? [];
+        execAllowlistCount = Math.max(execAllowlistCount, allowlist.length);
+        let dangerousBins = ["python3", "python", "bash", "sh", "curl", "wget", "rm", "cat", "env", "node", "npm", "npx"];
+        for (let entry of allowlist) {
+          let bin = entry.pattern?.split("/").pop() ?? "";
+          dangerousBins.includes(bin) && execDangerousInAllowlist.push(bin);
+        }
+      }
+      defaultSecurity === "allowlist" && execAllowlistCount > 0 && (hasExecAllowlist = !0);
+    } catch {
+    }
+  if (ctx.config.tools?.exec?.host === "gateway" && (hasExecAllowlist ? findings.push({
+    id: "SC-EXEC-002",
+    severity: execAskFallback === "deny" ? "INFO" : "LOW",
+    category: "execution",
+    title: "Commands execute on host with exec allowlist active",
+    description: `tools.exec.host is "gateway" but exec-approvals.json provides compensating control: ${execAllowlistCount} allowed binaries, fallback=${execAskFallback}.`,
+    evidence: `tools.exec.host = "gateway", exec-approvals: ${execAllowlistCount} entries, askFallback = "${execAskFallback}"`,
+    remediation: execAskFallback === "deny" ? "No action needed \u2014 allowlist + deny fallback provides strong execution control" : 'Set defaults.askFallback to "deny" in exec-approvals.json for defense-in-depth',
+    autoFixable: !1,
+    references: [],
+    owaspAsi: "ASI05"
+  }) : findings.push({
     id: "SC-EXEC-002",
     severity: "HIGH",
     category: "execution",
     title: "Commands execute on host, not in sandbox",
     description: 'tools.exec.host is "gateway", meaning commands run directly on the host machine without isolation.',
     evidence: 'tools.exec.host = "gateway"',
-    remediation: 'Set tools.exec.host to "sandbox"',
+    remediation: 'Set tools.exec.host to "sandbox" or configure exec-approvals.json with an allowlist',
     autoFixable: !0,
     references: [],
     owaspAsi: "ASI05"
-  }), ctx.config.sandbox?.mode !== "all" && findings.push({
+  })), hasExecAllowlist && execDangerousInAllowlist.length > 0) {
+    let unique = [...new Set(execDangerousInAllowlist)];
+    findings.push({
+      id: "SC-EXEC-008",
+      severity: "MEDIUM",
+      category: "execution",
+      title: "Dangerous binaries in exec allowlist",
+      description: `Exec allowlist contains binaries that can be used for arbitrary code execution or data exfiltration: ${unique.join(", ")}`,
+      evidence: `Dangerous binaries in allowlist: ${unique.join(", ")}`,
+      remediation: "Remove dangerous binaries from allowlist and require approval for each invocation",
+      autoFixable: !1,
+      references: [],
+      owaspAsi: "ASI02"
+    });
+  }
+  ctx.config.sandbox?.mode !== "all" && findings.push({
     id: "SC-EXEC-003",
     severity: "MEDIUM",
     category: "execution",
@@ -1215,7 +1258,7 @@ async function scanSkill(skillDir, skillName) {
 }
 
 // cli.ts
-var VERSION = "1.0.1";
+var VERSION = "1.1.0";
 async function createAuditContext(stateDir, config) {
   let loadedConfig = config;
   if (!loadedConfig)
