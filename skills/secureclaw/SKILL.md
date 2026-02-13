@@ -10,27 +10,27 @@
 
 ### полный аудит
 ```bash
-node ~/clawd/skills/secureclaw/secureclaw-audit.mjs audit
+node skills/secureclaw/secureclaw-audit.mjs audit
 ```
 
 ### аудит в JSON (для парсинга)
 ```bash
-node ~/clawd/skills/secureclaw/secureclaw-audit.mjs audit --json
+node skills/secureclaw/secureclaw-audit.mjs audit --json
 ```
 
 ### глубокий аудит (с сетевыми проверками портов)
 ```bash
-node ~/clawd/skills/secureclaw/secureclaw-audit.mjs audit --deep
+node skills/secureclaw/secureclaw-audit.mjs audit --deep
 ```
 
 ### быстрый статус
 ```bash
-node ~/clawd/skills/secureclaw/secureclaw-audit.mjs status
+node skills/secureclaw/secureclaw-audit.mjs status
 ```
 
 ### сканирование скилла перед установкой
 ```bash
-node ~/clawd/skills/secureclaw/secureclaw-audit.mjs scan-skill <skill-name>
+node skills/secureclaw/secureclaw-audit.mjs scan-skill <skill-name>
 ```
 
 ## как интерпретировать
