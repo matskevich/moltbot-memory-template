@@ -1126,7 +1126,7 @@ function formatConsoleReport(report) {
     for (let finding of findings)
       lines.push(formatFinding(finding)), lines.push("");
   }
-  return lines.push(`${BOLD}${MAGENTA}--- Summary ---${RESET}`), lines.push(""), lines.push(`  ${BG_RED}${WHITE} CRITICAL ${RESET} ${report.summary.critical}`), lines.push(`  ${RED}${BOLD} HIGH     ${RESET} ${report.summary.high}`), lines.push(`  ${YELLOW} MEDIUM   ${RESET} ${report.summary.medium}`), lines.push(`  ${BLUE} LOW      ${RESET} ${report.summary.low}`), lines.push(`  ${DIM} INFO     ${RESET} ${report.summary.info}`), lines.push(""), lines.push(`  ${GREEN}Auto-fixable:${RESET} ${report.summary.autoFixable} finding(s)`), lines.push(`  ${DIM}Run "openclaw secureclaw harden" to apply automatic fixes${RESET}`), lines.push(""), lines.join(`
+  return lines.push(`${BOLD}${MAGENTA}--- Summary ---${RESET}`), lines.push(""), lines.push(`  ${BG_RED}${WHITE} CRITICAL ${RESET} ${report.summary.critical}`), lines.push(`  ${RED}${BOLD} HIGH     ${RESET} ${report.summary.high}`), lines.push(`  ${YELLOW} MEDIUM   ${RESET} ${report.summary.medium}`), lines.push(`  ${BLUE} LOW      ${RESET} ${report.summary.low}`), lines.push(`  ${DIM} INFO     ${RESET} ${report.summary.info}`), lines.push(""), lines.push(`  ${GREEN}Auto-fixable:${RESET} ${report.summary.autoFixable} finding(s)`), lines.push(`  ${DIM}Review auto-fixable findings above and apply fixes manually${RESET}`), lines.push(""), lines.join(`
 `);
 }
 
@@ -1189,7 +1189,7 @@ async function scanSkill(skillDir, skillName) {
   try {
     files = await fs.readdir(skillDir);
   } catch {
-    return findings.push(`Could not read skill directory: ${skillDir}`), { safe: !0, skillName, findings, dangerousPatterns, iocMatches };
+    return findings.push(`Could not read skill directory: ${skillDir}`), safe = !1, { safe, skillName, findings, dangerousPatterns, iocMatches };
   }
   for (let file of files) {
     let filePath = path2.join(skillDir, file), stat3;
@@ -1215,7 +1215,7 @@ async function scanSkill(skillDir, skillName) {
 }
 
 // cli.ts
-var VERSION = "1.0.0";
+var VERSION = "1.0.1";
 async function createAuditContext(stateDir, config) {
   let loadedConfig = config;
   if (!loadedConfig)
