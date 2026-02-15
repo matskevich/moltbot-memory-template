@@ -43,8 +43,21 @@ var INLINE_IOC_DB = {
     linux: ["/tmp/.*redline", "/tmp/.*lumma"]
   }
 }, cachedDb = null;
+var IOC_REMOTE_URL = "https://raw.githubusercontent.com/matskevich/openclaw-brain/main/skills/secureclaw/ioc-db.json";
+function getLocalIocPath() {
+  let stateDir = process.env.OPENCLAW_STATE_DIR ?? path3.join(os2.homedir(), ".openclaw");
+  return path3.join(stateDir, "secureclaw-ioc.json");
+}
 async function loadIOCDatabase(_customPath) {
-  return cachedDb || (cachedDb = INLINE_IOC_DB, cachedDb);
+  if (cachedDb) return cachedDb;
+  let localPath = getLocalIocPath();
+  try {
+    let content = await fs2.readFile(localPath, "utf-8");
+    cachedDb = JSON.parse(content);
+    return cachedDb;
+  } catch {}
+  cachedDb = INLINE_IOC_DB;
+  return cachedDb;
 }
 function isKnownC2(db, ip) {
   return db.c2_ips.includes(ip);
@@ -1140,7 +1153,7 @@ async function runAudit(options = {}) {
   return {
     timestamp: (/* @__PURE__ */ new Date()).toISOString(),
     openclawVersion: ctx.openclawVersion,
-    secureclawVersion: "1.2.0",
+    secureclawVersion: "1.3.0",
     platform: ctx.platform,
     deploymentMode: ctx.deploymentMode,
     score,
@@ -1392,8 +1405,31 @@ async function scanSkill(skillDir, skillName) {
   return { safe, skillName, findings, dangerousPatterns, iocMatches };
 }
 
+// reporters/admission-reporter.ts
+function formatAdmissionReport(report) {
+  let allCategories = ["gateway", "credentials", "execution", "access-control", "supply-chain", "memory", "cost", "ioc"];
+  let passed = [], failed = [];
+  for (let cat of allCategories) {
+    let catFindings = report.findings.filter(f => f.category === cat);
+    let hasSevere = catFindings.some(f => f.severity === "CRITICAL" || f.severity === "HIGH" || f.severity === "MEDIUM");
+    if (hasSevere) failed.push(cat); else passed.push(cat);
+  }
+  return JSON.stringify({
+    secureclaw_version: report.secureclawVersion,
+    timestamp: report.timestamp,
+    platform: report.platform,
+    score: report.score,
+    grade: report.score >= 90 ? "A" : report.score >= 75 ? "B" : report.score >= 60 ? "C" : report.score >= 40 ? "D" : "F",
+    summary: report.summary,
+    checks_passed: passed,
+    checks_failed: failed,
+    findings_critical: report.findings.filter(f => f.severity === "CRITICAL").map(f => ({ id: f.id, title: f.title, category: f.category })),
+    findings_high: report.findings.filter(f => f.severity === "HIGH").map(f => ({ id: f.id, title: f.title, category: f.category }))
+  }, null, 2);
+}
+
 // cli.ts
-var VERSION = "1.2.0";
+var VERSION = "1.3.0";
 async function createAuditContext(stateDir, config) {
   let loadedConfig = config;
   if (!loadedConfig)
@@ -1444,8 +1480,8 @@ async function createAuditContext(stateDir, config) {
   };
 }
 async function cmdAudit(args) {
-  let jsonOutput = args.includes("--json"), telegramOutput = args.includes("--telegram"), deep = args.includes("--deep"), stateDir = process.env.OPENCLAW_STATE_DIR ?? path3.join(os2.homedir(), ".openclaw"), ctx = await createAuditContext(stateDir), report = await runAudit({ deep, context: ctx });
-  let output = telegramOutput ? formatTelegramReport(report) : jsonOutput ? formatJsonReport(report) : formatConsoleReport(report);
+  let jsonOutput = args.includes("--json"), telegramOutput = args.includes("--telegram"), admissionOutput = args.includes("--admission"), deep = args.includes("--deep"), stateDir = process.env.OPENCLAW_STATE_DIR ?? path3.join(os2.homedir(), ".openclaw"), ctx = await createAuditContext(stateDir), report = await runAudit({ deep, context: ctx });
+  let output = admissionOutput ? formatAdmissionReport(report) : telegramOutput ? formatTelegramReport(report) : jsonOutput ? formatJsonReport(report) : formatConsoleReport(report);
   let fileIdx = args.indexOf("--file"), filePath = fileIdx !== -1 && args[fileIdx + 1] ? args[fileIdx + 1] : null;
   if (filePath) {
     await fs2.writeFile(filePath, output, "utf-8");
@@ -1470,6 +1506,24 @@ async function cmdStatus() {
   let stateDir = process.env.OPENCLAW_STATE_DIR ?? path3.join(os2.homedir(), ".openclaw"), ctx = await createAuditContext(stateDir), report = await runAudit({ context: ctx });
   console.log(`secureclaw v${VERSION}`), console.log(`score: ${report.score}/100`), console.log(`critical: ${report.summary.critical} | high: ${report.summary.high} | medium: ${report.summary.medium} | low: ${report.summary.low}`), console.log(`auto-fixable: ${report.summary.autoFixable}`), console.log(`platform: ${report.platform}`), console.log(`state dir: ${stateDir}`);
 }
+async function cmdUpdateIoc() {
+  let localPath = getLocalIocPath();
+  console.log(`fetching IOC db from ${IOC_REMOTE_URL}...`);
+  try {
+    let resp = await fetch(IOC_REMOTE_URL);
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    let text = await resp.text(), db = JSON.parse(text);
+    let dir = path3.dirname(localPath);
+    await fs2.mkdir(dir, { recursive: true });
+    await fs2.writeFile(localPath, text, "utf-8");
+    let stats = `${db.c2_ips?.length ?? 0} C2 IPs, ${Object.keys(db.malicious_skill_hashes ?? {}).length} hashes, ${db.typosquat_patterns?.length ?? 0} typosquat patterns`;
+    console.log(`IOC db updated: v${db.version} (${stats})`);
+    console.log(`saved to ${localPath}`);
+  } catch (err) {
+    console.error(`failed to update IOC db: ${err.message}`);
+    process.exitCode = 1;
+  }
+}
 async function main() {
   let args = process.argv.slice(2), command = args[0];
   switch (command) {
@@ -1478,6 +1532,9 @@ async function main() {
       break;
     case "scan-skill":
       await cmdScanSkill(args.slice(1));
+      break;
+    case "update-ioc":
+      await cmdUpdateIoc();
       break;
     case "status":
       await cmdStatus();
@@ -1489,7 +1546,7 @@ async function main() {
     case "--help":
     case "-h":
     case void 0:
-      console.log(`secureclaw v${VERSION} \u2014 security audit for openclaw`), console.log(""), console.log("usage:"), console.log("  secureclaw-audit audit [flags]          run security audit"), console.log("  secureclaw-audit scan-skill <name>      scan a skill for threats"), console.log("  secureclaw-audit status                 quick security summary"), console.log(""), console.log("flags:"), console.log("  --json           machine-readable JSON output"), console.log("  --telegram       human-readable markdown (for telegram/chat)"), console.log("  --deep           active network probing (port scan)"), console.log("  --file PATH      write report to file instead of stdout"), console.log(""), console.log("env:"), console.log("  OPENCLAW_STATE_DIR    override state directory (default: ~/.openclaw)");
+      console.log(`secureclaw v${VERSION} \u2014 security audit for openclaw`), console.log(""), console.log("usage:"), console.log("  secureclaw-audit audit [flags]          run security audit"), console.log("  secureclaw-audit scan-skill <name>      scan a skill for threats"), console.log("  secureclaw-audit update-ioc             fetch latest IOC database from github"), console.log("  secureclaw-audit status                 quick security summary"), console.log(""), console.log("flags:"), console.log("  --json           machine-readable JSON output"), console.log("  --telegram       human-readable markdown (for telegram/chat)"), console.log("  --admission      minimal attestation JSON (for arena-hub)"), console.log("  --deep           active network probing (port scan)"), console.log("  --file PATH      write report to file instead of stdout"), console.log(""), console.log("env:"), console.log("  OPENCLAW_STATE_DIR    override state directory (default: ~/.openclaw)");
       break;
     default:
       console.error(`unknown command: ${command}`), console.error("run with --help for usage"), process.exitCode = 1;
