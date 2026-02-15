@@ -159,6 +159,18 @@ function probePort(port, host, timeoutMs = 2e3) {
 }
 async function auditGateway(ctx, deep = !1) {
   let findings = [], gw = ctx.config.gateway;
+  if (!gw || Object.keys(gw).length === 0) return findings.push({
+    id: "SC-GW-000",
+    severity: "INFO",
+    category: "gateway",
+    title: "No gateway configured",
+    description: "No gateway section in config. Gateway checks skipped. This is normal for direct-start or CLI-only setups.",
+    evidence: "gateway section: absent",
+    remediation: "No action needed unless you intend to expose a gateway",
+    autoFixable: !1,
+    references: [],
+    owaspAsi: "ASI05"
+  }), findings;
   gw?.bind !== "loopback" && findings.push({
     id: "SC-GW-001",
     severity: "CRITICAL",
@@ -1121,7 +1133,7 @@ async function runAudit(options = {}) {
   return {
     timestamp: (/* @__PURE__ */ new Date()).toISOString(),
     openclawVersion: ctx.openclawVersion,
-    secureclawVersion: "1.0.0",
+    secureclawVersion: "1.2.0",
     platform: ctx.platform,
     deploymentMode: ctx.deploymentMode,
     score,
@@ -1176,6 +1188,59 @@ function formatConsoleReport(report) {
 // reporters/json-reporter.ts
 function formatJsonReport(report) {
   return JSON.stringify(report, null, 2);
+}
+
+// reporters/telegram-reporter.ts
+function getTelegramGrade(score) {
+  if (score >= 90) return { letter: "A", icon: "\u2705" };
+  if (score >= 75) return { letter: "B", icon: "\u2705" };
+  if (score >= 60) return { letter: "C", icon: "\u26A0\uFE0F" };
+  if (score >= 40) return { letter: "D", icon: "\uD83D\uDED1" };
+  return { letter: "F", icon: "\uD83D\uDEA8" };
+}
+function formatTelegramReport(report) {
+  let grade = getTelegramGrade(report.score);
+  let lines = [];
+  lines.push(`${grade.icon} *SecureClaw Audit — ${report.score}/100 (${grade.letter})*`);
+  lines.push(`${report.platform} | ${report.deploymentMode} | ${report.timestamp.split("T")[0]}`);
+  lines.push("");
+  let fixNow = report.findings.filter(f => f.severity === "CRITICAL" || f.severity === "HIGH");
+  let review = report.findings.filter(f => f.severity === "MEDIUM");
+  let info = report.findings.filter(f => f.severity === "LOW" || f.severity === "INFO");
+  let allCategories = ["gateway", "credentials", "execution", "access-control", "supply-chain", "memory", "cost", "ioc"];
+  let cleanCategories = allCategories.filter(c => {
+    let catFindings = report.findings.filter(f => f.category === c);
+    return catFindings.length > 0 && catFindings.every(f => f.severity === "INFO" || f.severity === "LOW");
+  });
+  if (fixNow.length > 0) {
+    lines.push(`\uD83D\uDEA8 *FIX NOW* (${fixNow.length}):`);
+    for (let f of fixNow) {
+      let fix = f.autoFixable ? ` — \`${f.remediation}\`` : ` — ${f.remediation}`;
+      lines.push(`• *${f.title}*${fix}`);
+    }
+    lines.push("");
+  }
+  if (review.length > 0) {
+    lines.push(`\u26A0\uFE0F *REVIEW* (${review.length}):`);
+    for (let f of review) {
+      lines.push(`• ${f.title} — ${f.remediation}`);
+    }
+    lines.push("");
+  }
+  if (cleanCategories.length > 0) {
+    lines.push(`\u2705 *PASSED:* ${cleanCategories.join(", ")}`);
+    lines.push("");
+  }
+  if (info.length > 0) {
+    lines.push(`\u2139\uFE0F *INFO* (${info.length}):`);
+    for (let f of info) {
+      lines.push(`• ${f.title}`);
+    }
+    lines.push("");
+  }
+  lines.push(`—`);
+  lines.push(`${report.summary.autoFixable} auto-fixable | secureclaw v${report.secureclawVersion}`);
+  return lines.join("\n");
 }
 
 // monitors/skill-scanner.ts
@@ -1258,7 +1323,7 @@ async function scanSkill(skillDir, skillName) {
 }
 
 // cli.ts
-var VERSION = "1.1.0";
+var VERSION = "1.2.0";
 async function createAuditContext(stateDir, config) {
   let loadedConfig = config;
   if (!loadedConfig)
@@ -1309,8 +1374,8 @@ async function createAuditContext(stateDir, config) {
   };
 }
 async function cmdAudit(args) {
-  let jsonOutput = args.includes("--json"), deep = args.includes("--deep"), stateDir = process.env.OPENCLAW_STATE_DIR ?? path3.join(os2.homedir(), ".openclaw"), ctx = await createAuditContext(stateDir), report = await runAudit({ deep, context: ctx });
-  console.log(jsonOutput ? formatJsonReport(report) : formatConsoleReport(report)), report.summary.critical > 0 && (process.exitCode = 1);
+  let jsonOutput = args.includes("--json"), telegramOutput = args.includes("--telegram"), deep = args.includes("--deep"), stateDir = process.env.OPENCLAW_STATE_DIR ?? path3.join(os2.homedir(), ".openclaw"), ctx = await createAuditContext(stateDir), report = await runAudit({ deep, context: ctx });
+  console.log(telegramOutput ? formatTelegramReport(report) : jsonOutput ? formatJsonReport(report) : formatConsoleReport(report)), report.summary.critical > 0 && (process.exitCode = 1);
 }
 async function cmdScanSkill(args) {
   let skillName = args.find((a) => !a.startsWith("--"));
@@ -1346,7 +1411,7 @@ async function main() {
     case "--help":
     case "-h":
     case void 0:
-      console.log(`secureclaw v${VERSION} \u2014 security audit for openclaw`), console.log(""), console.log("usage:"), console.log("  secureclaw-audit audit [--json] [--deep]   run security audit"), console.log("  secureclaw-audit scan-skill <name>         scan a skill for threats"), console.log("  secureclaw-audit status                    quick security summary"), console.log(""), console.log("env:"), console.log("  OPENCLAW_STATE_DIR    override state directory (default: ~/.openclaw)");
+      console.log(`secureclaw v${VERSION} \u2014 security audit for openclaw`), console.log(""), console.log("usage:"), console.log("  secureclaw-audit audit [--json] [--telegram] [--deep]   run security audit"), console.log("  secureclaw-audit scan-skill <name>                      scan a skill for threats"), console.log("  secureclaw-audit status                                 quick security summary"), console.log(""), console.log("flags:"), console.log("  --json        machine-readable JSON output"), console.log("  --telegram    human-readable markdown (for telegram/chat)"), console.log("  --deep        active network probing (port scan)"), console.log(""), console.log("env:"), console.log("  OPENCLAW_STATE_DIR    override state directory (default: ~/.openclaw)");
       break;
     default:
       console.error(`unknown command: ${command}`), console.error("run with --help for usage"), process.exitCode = 1;

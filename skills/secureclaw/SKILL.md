@@ -8,7 +8,12 @@
 
 ## как запускать
 
-### полный аудит
+### полный аудит (telegram-friendly output — ВСЕГДА используй этот формат при ответе пользователю)
+```bash
+node skills/secureclaw/secureclaw-audit.mjs audit --telegram
+```
+
+### полный аудит (terminal, для отладки)
 ```bash
 node skills/secureclaw/secureclaw-audit.mjs audit
 ```
@@ -20,7 +25,7 @@ node skills/secureclaw/secureclaw-audit.mjs audit --json
 
 ### глубокий аудит (с сетевыми проверками портов)
 ```bash
-node skills/secureclaw/secureclaw-audit.mjs audit --deep
+node skills/secureclaw/secureclaw-audit.mjs audit --deep --telegram
 ```
 
 ### быстрый статус
