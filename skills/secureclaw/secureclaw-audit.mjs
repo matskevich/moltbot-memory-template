@@ -575,18 +575,25 @@ async function auditExecution(ctx) {
       owaspAsi: "ASI02"
     });
   }
-  ctx.config.sandbox?.mode !== "all" && findings.push({
-    id: "SC-EXEC-003",
-    severity: "MEDIUM",
-    category: "execution",
-    title: 'Sandbox mode not set to "all"',
-    description: `Sandbox mode is "${ctx.config.sandbox?.mode ?? "undefined"}". Not all commands run in a sandboxed environment.`,
-    evidence: `sandbox.mode = "${ctx.config.sandbox?.mode ?? "undefined"}"`,
-    remediation: 'Manually set sandbox.mode to "all" in your OpenClaw settings (not auto-fixable \u2014 key not in OpenClaw config schema)',
-    autoFixable: !1,
-    references: [],
-    owaspAsi: "ASI05"
-  });
+  if (ctx.config.sandbox?.mode !== "all") {
+    let hasAllowlist = hasExecAllowlist;
+    findings.push({
+      id: "SC-EXEC-003",
+      severity: hasAllowlist ? "LOW" : "MEDIUM",
+      category: "execution",
+      title: hasAllowlist ? "No OS-level sandbox (mitigated by exec allowlist)" : "No execution sandbox configured",
+      description: hasAllowlist
+        ? `Docker sandbox (sandbox.mode="all") breaks openclaw agent flow (memory, skills, heartbeat). Exec allowlist provides compensating control. For OS-level isolation consider bwrap or sandbox-exec hooks.`
+        : `No sandbox and no exec allowlist. Agent commands run directly on host without restrictions.`,
+      evidence: `sandbox.mode = "${ctx.config.sandbox?.mode ?? "undefined"}", exec allowlist: ${hasAllowlist ? "active" : "none"}`,
+      remediation: hasAllowlist
+        ? "Current setup is reasonable. For defense-in-depth add bwrap/sandbox-exec PreToolUse hook"
+        : "Configure exec-approvals.json with an allowlist, or add bwrap/sandbox-exec PreToolUse hook",
+      autoFixable: !1,
+      references: [],
+      owaspAsi: "ASI05"
+    });
+  }
   let dc = ctx.dockerCompose;
   if (dc?.services)
     for (let [svcName, svc] of Object.entries(dc.services))
@@ -1217,7 +1224,7 @@ var WHY_MAP = {
   "SC-CRED-008": "API key found in config — easy target for theft",
   "SC-EXEC-001": "agent runs ANY command without asking you",
   "SC-EXEC-002": "commands run directly on host, not sandboxed",
-  "SC-EXEC-003": "agent commands run directly on host OS",
+  "SC-EXEC-003": "no OS-level isolation between agent and host (docker sandbox breaks openclaw, use bwrap instead)",
   "SC-EXEC-008": "allowlisted binaries can execute arbitrary code",
   "SC-AC-001": "anyone can DM your bot and inject prompts",
   "SC-AC-002": "any group member can control the agent",
