@@ -8,24 +8,25 @@
 
 ## как запускать
 
-### полный аудит (telegram-friendly output — ВСЕГДА используй этот формат при ответе пользователю)
+### полный аудит (ОСНОВНОЙ СПОСОБ — используй ВСЕГДА при ответе пользователю)
 ```bash
-node skills/secureclaw/secureclaw-audit.mjs audit --telegram
+node skills/secureclaw/secureclaw-audit.mjs audit --telegram --file /tmp/secureclaw-report.txt
+```
+после запуска: прочитай /tmp/secureclaw-report.txt и отправь содержимое пользователю ЦЕЛИКОМ, без изменений, без пересказа, без суммаризации. отчёт уже отформатирован для telegram.
+
+### глубокий аудит (с сетевыми проверками портов)
+```bash
+node skills/secureclaw/secureclaw-audit.mjs audit --deep --telegram --file /tmp/secureclaw-report.txt
+```
+
+### аудит в JSON (для парсинга/автоматизации)
+```bash
+node skills/secureclaw/secureclaw-audit.mjs audit --json --file /tmp/secureclaw-report.json
 ```
 
 ### полный аудит (terminal, для отладки)
 ```bash
 node skills/secureclaw/secureclaw-audit.mjs audit
-```
-
-### аудит в JSON (для парсинга)
-```bash
-node skills/secureclaw/secureclaw-audit.mjs audit --json
-```
-
-### глубокий аудит (с сетевыми проверками портов)
-```bash
-node skills/secureclaw/secureclaw-audit.mjs audit --deep --telegram
 ```
 
 ### быстрый статус
@@ -67,8 +68,8 @@ node skills/secureclaw/secureclaw-audit.mjs scan-skill <skill-name>
 каждый finding содержит `owaspAsi` поле — ссылку на OWASP Agent Security Initiative
 
 ### что делать с results
-1. покажи пользователю score и summary
-2. по CRITICAL — объясни угрозу и дай конкретные шаги
+1. КРИТИЧЕСКИ ВАЖНО: прочитай файл /tmp/secureclaw-report.txt и отправь его содержимое пользователю ЦЕЛИКОМ как есть. НЕ переформатируй, НЕ суммаризируй, НЕ пропускай findings. отчёт УЖЕ содержит "why" и "fix" для каждого finding.
+2. после полного вывода — кратко (1-2 предложения) прокомментируй: что критично и что можно починить за 2 минуты
 3. auto-fixable findings — предложи выполнить fix команды
 4. для scan-skill — если safe=false, настоятельно рекомендуй НЕ устанавливать скилл
 

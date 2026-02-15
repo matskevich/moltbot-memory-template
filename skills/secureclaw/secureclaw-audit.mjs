@@ -1198,10 +1198,80 @@ function getTelegramGrade(score) {
   if (score >= 40) return { letter: "D", icon: "\uD83D\uDED1" };
   return { letter: "F", icon: "\uD83D\uDEA8" };
 }
+var WHY_MAP = {
+  "SC-GW-001": "attackers on your network can reach the agent API",
+  "SC-GW-002": "anyone with network access controls your bot",
+  "SC-GW-003": "weak token = brute-forceable in minutes",
+  "SC-GW-006": "credentials and conversations travel in plaintext",
+  "SC-GW-007": "local network learns your bot exists and its config",
+  "SC-GW-008": "all connections bypass auth via spoofed IP",
+  "SC-GW-009": "anyone can access Control UI without device auth",
+  "SC-GW-010": "weaker auth methods allowed on Control UI",
+  "SC-CRED-001": "other users on this machine can read bot secrets",
+  "SC-CRED-002": "other users can read your config with API keys",
+  "SC-CRED-003": "infostealers target plaintext .env files first",
+  "SC-CRED-004": "credential files readable by other system users",
+  "SC-CRED-005": "auth profiles accessible to other users",
+  "SC-CRED-006": "OAuth tokens in plaintext — infostealer target",
+  "SC-CRED-007": "API keys leak into LLM context via memory files",
+  "SC-CRED-008": "API key found in config — easy target for theft",
+  "SC-EXEC-001": "agent runs ANY command without asking you",
+  "SC-EXEC-002": "commands run directly on host, not sandboxed",
+  "SC-EXEC-003": "agent commands run directly on host OS",
+  "SC-EXEC-008": "allowlisted binaries can execute arbitrary code",
+  "SC-AC-001": "anyone can DM your bot and inject prompts",
+  "SC-AC-002": "any group member can control the agent",
+  "SC-AC-003": "wildcard allowlist = no access control",
+  "SC-AC-004": "channel has no auth — open to everyone",
+  "SC-AC-005": "conversations may leak between different users",
+  "SC-MEM-002": "attacker planted instructions in bot memory",
+  "SC-MEM-003": "hidden instructions may be encoded in base64",
+  "SC-MEM-004": "memory references untrusted external domain",
+  "SC-MEM-005": "other users can modify bot memory files",
+  "SC-COST-001": "compromised agent can burn unlimited API credits",
+  "SC-COST-003": "frequent cron = high API costs fast",
+  "SC-COST-004": "daily spend above your threshold",
+  "SC-SKILL-002": "installed skill contains dangerous code patterns",
+  "SC-SKILL-003": "installed skill matches known malware signature",
+  "SC-SKILL-005": "skill name looks like a known typosquat attack",
+  "SC-SKILL-006": "skill README asks you to run dangerous commands",
+  "SC-IOC-001": "your bot connected to a known attack server",
+  "SC-IOC-002": "installed skill references a malicious domain",
+  "SC-IOC-003": "installed skill matches known malware hash",
+  "SC-IOC-004": "macOS infostealer artifacts found on disk",
+  "SC-IOC-005": "Linux infostealer artifacts found on disk"
+};
+var EFFORT_MAP = {
+  "SC-GW-001": "2 min", "SC-GW-002": "2 min", "SC-GW-003": "2 min",
+  "SC-GW-006": "30 min", "SC-GW-007": "2 min", "SC-GW-008": "2 min",
+  "SC-GW-009": "2 min", "SC-GW-010": "2 min",
+  "SC-CRED-001": "1 min", "SC-CRED-002": "1 min", "SC-CRED-003": "10 min",
+  "SC-CRED-004": "1 min", "SC-CRED-005": "1 min", "SC-CRED-006": "10 min",
+  "SC-CRED-007": "5 min", "SC-CRED-008": "5 min",
+  "SC-EXEC-001": "2 min", "SC-EXEC-002": "5 min", "SC-EXEC-003": "5 min",
+  "SC-EXEC-008": "10 min",
+  "SC-AC-001": "2 min", "SC-AC-002": "2 min", "SC-AC-003": "5 min",
+  "SC-AC-004": "2 min", "SC-AC-005": "2 min",
+  "SC-MEM-002": "research", "SC-MEM-003": "research", "SC-MEM-004": "5 min",
+  "SC-MEM-005": "1 min",
+  "SC-COST-001": "2 min", "SC-COST-003": "5 min", "SC-COST-004": "5 min",
+  "SC-SKILL-002": "research", "SC-SKILL-003": "1 min", "SC-SKILL-005": "research",
+  "SC-SKILL-006": "research",
+  "SC-IOC-001": "research", "SC-IOC-002": "1 min", "SC-IOC-003": "1 min",
+  "SC-IOC-004": "research", "SC-IOC-005": "research"
+};
+function formatTelegramFinding(f) {
+  let why = WHY_MAP[f.id] ?? f.description.split(".")[0].toLowerCase();
+  let effort = EFFORT_MAP[f.id] ?? "research";
+  let lines = [`\u2022 *${f.title}*`];
+  lines.push(`  why: ${why}`);
+  lines.push(`  fix [${effort}]: ${f.remediation}`);
+  return lines.join("\n");
+}
 function formatTelegramReport(report) {
   let grade = getTelegramGrade(report.score);
   let lines = [];
-  lines.push(`${grade.icon} *SecureClaw Audit — ${report.score}/100 (${grade.letter})*`);
+  lines.push(`${grade.icon} *SecureClaw Audit \u2014 ${report.score}/100 (${grade.letter})*`);
   lines.push(`${report.platform} | ${report.deploymentMode} | ${report.timestamp.split("T")[0]}`);
   lines.push("");
   let fixNow = report.findings.filter(f => f.severity === "CRITICAL" || f.severity === "HIGH");
@@ -1214,31 +1284,24 @@ function formatTelegramReport(report) {
   });
   if (fixNow.length > 0) {
     lines.push(`\uD83D\uDEA8 *FIX NOW* (${fixNow.length}):`);
-    for (let f of fixNow) {
-      let fix = f.autoFixable ? ` — \`${f.remediation}\`` : ` — ${f.remediation}`;
-      lines.push(`• *${f.title}*${fix}`);
-    }
     lines.push("");
+    for (let f of fixNow) lines.push(formatTelegramFinding(f)), lines.push("");
   }
   if (review.length > 0) {
     lines.push(`\u26A0\uFE0F *REVIEW* (${review.length}):`);
-    for (let f of review) {
-      lines.push(`• ${f.title} — ${f.remediation}`);
-    }
     lines.push("");
+    for (let f of review) lines.push(formatTelegramFinding(f)), lines.push("");
   }
   if (cleanCategories.length > 0) {
     lines.push(`\u2705 *PASSED:* ${cleanCategories.join(", ")}`);
     lines.push("");
   }
   if (info.length > 0) {
-    lines.push(`\u2139\uFE0F *INFO* (${info.length}):`);
-    for (let f of info) {
-      lines.push(`• ${f.title}`);
-    }
+    let infoTitles = info.map(f => f.title);
+    lines.push(`\u2139\uFE0F *INFO:* ${infoTitles.join(" | ")}`);
     lines.push("");
   }
-  lines.push(`—`);
+  lines.push(`\u2014`);
   lines.push(`${report.summary.autoFixable} auto-fixable | secureclaw v${report.secureclawVersion}`);
   return lines.join("\n");
 }
@@ -1375,7 +1438,15 @@ async function createAuditContext(stateDir, config) {
 }
 async function cmdAudit(args) {
   let jsonOutput = args.includes("--json"), telegramOutput = args.includes("--telegram"), deep = args.includes("--deep"), stateDir = process.env.OPENCLAW_STATE_DIR ?? path3.join(os2.homedir(), ".openclaw"), ctx = await createAuditContext(stateDir), report = await runAudit({ deep, context: ctx });
-  console.log(telegramOutput ? formatTelegramReport(report) : jsonOutput ? formatJsonReport(report) : formatConsoleReport(report)), report.summary.critical > 0 && (process.exitCode = 1);
+  let output = telegramOutput ? formatTelegramReport(report) : jsonOutput ? formatJsonReport(report) : formatConsoleReport(report);
+  let fileIdx = args.indexOf("--file"), filePath = fileIdx !== -1 && args[fileIdx + 1] ? args[fileIdx + 1] : null;
+  if (filePath) {
+    await fs2.writeFile(filePath, output, "utf-8");
+    console.log(`report written to ${filePath}`);
+  } else {
+    console.log(output);
+  }
+  report.summary.critical > 0 && (process.exitCode = 1);
 }
 async function cmdScanSkill(args) {
   let skillName = args.find((a) => !a.startsWith("--"));
@@ -1411,7 +1482,7 @@ async function main() {
     case "--help":
     case "-h":
     case void 0:
-      console.log(`secureclaw v${VERSION} \u2014 security audit for openclaw`), console.log(""), console.log("usage:"), console.log("  secureclaw-audit audit [--json] [--telegram] [--deep]   run security audit"), console.log("  secureclaw-audit scan-skill <name>                      scan a skill for threats"), console.log("  secureclaw-audit status                                 quick security summary"), console.log(""), console.log("flags:"), console.log("  --json        machine-readable JSON output"), console.log("  --telegram    human-readable markdown (for telegram/chat)"), console.log("  --deep        active network probing (port scan)"), console.log(""), console.log("env:"), console.log("  OPENCLAW_STATE_DIR    override state directory (default: ~/.openclaw)");
+      console.log(`secureclaw v${VERSION} \u2014 security audit for openclaw`), console.log(""), console.log("usage:"), console.log("  secureclaw-audit audit [flags]          run security audit"), console.log("  secureclaw-audit scan-skill <name>      scan a skill for threats"), console.log("  secureclaw-audit status                 quick security summary"), console.log(""), console.log("flags:"), console.log("  --json           machine-readable JSON output"), console.log("  --telegram       human-readable markdown (for telegram/chat)"), console.log("  --deep           active network probing (port scan)"), console.log("  --file PATH      write report to file instead of stdout"), console.log(""), console.log("env:"), console.log("  OPENCLAW_STATE_DIR    override state directory (default: ~/.openclaw)");
       break;
     default:
       console.error(`unknown command: ${command}`), console.error("run with --help for usage"), process.exitCode = 1;
